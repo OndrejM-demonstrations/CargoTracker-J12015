@@ -1,6 +1,8 @@
 package net.java.cargotracker.interfaces.booking.web;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -114,7 +116,21 @@ public class CargoAdmin {
     }
 
     public List<RouteCandidate> getRouteCanditates() {
-        return bookingServiceFacade.requestPossibleRoutesForCargo(trackingId);
+        List<RouteCandidate> result = new ArrayList<>();
+        getRouteCanditates(v -> result.add(v), () -> {});
+        return result;
+    }
+
+    /**
+     * A non-blocking API - consumer should update client in asynchronous way, e.g. using a web socket.
+     * Everything is called in the same thread now, we may expect to execute consumers in separate threads in the future.
+     * @param consumer Called for each route candidate
+     * @param finihed Called after last rout candidate to indicate the end of list
+     */
+    public void getRouteCanditates(Consumer<RouteCandidate> consumer, Runnable finihed) {
+        bookingServiceFacade.requestPossibleRoutesForCargo(trackingId).stream()
+                .forEach(consumer);
+        finihed.run();
     }
 
     public String assignItinerary() {
