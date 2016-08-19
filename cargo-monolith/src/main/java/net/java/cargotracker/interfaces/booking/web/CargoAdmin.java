@@ -1,7 +1,7 @@
 package net.java.cargotracker.interfaces.booking.web;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.RequestScoped;
@@ -115,12 +115,34 @@ public class CargoAdmin {
         return bookingServiceFacade.loadCargoForRouting(trackingId);
     }
 
+    private static class CompletionSequence<T> {
+        public final T result;
+        public final CompletionStage<CompletionSequence<?>> next;
+
+        public CompletionSequence(T result, CompletionStage<CompletionSequence<?>> next) {
+            this.result = result;
+            this.next = next;
+        }
+        
+    }
+    
     public List<RouteCandidate> getRouteCanditates() {
         List<RouteCandidate> result = new ArrayList<>();
         getRouteCanditates(v -> result.add(v), () -> {});
+        
+        
+        new CompletableFuture<CompletionSequence<RouteCandidate>>()
+                .thenComposeAsync(cSeq -> {
+                    result.add(cSeq.result);
+                    return cSeq.next;
+                    }, executor
+                );
         return result;
     }
 
+    @Inject
+    private ExecutorService executor;
+    
     /**
      * A non-blocking API - consumer should update client in asynchronous way, e.g. using a web socket.
      * Everything is called in the same thread now, we may expect to execute consumers in separate threads in the future.
