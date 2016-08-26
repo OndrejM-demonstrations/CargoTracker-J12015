@@ -9,6 +9,9 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Initialized;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -29,7 +32,7 @@ import net.java.cargotracker.domain.model.voyage.SampleVoyages;
  * Loads sample data for demo.
  */
 @Singleton
-@Startup
+@ApplicationScoped
 public class SampleDataGenerator {
 
     // TODO See if the logger can be injected.
@@ -42,7 +45,10 @@ public class SampleDataGenerator {
     @Inject
     private HandlingEventRepository handlingEventRepository;
 
-    @PostConstruct
+    public void startup(@Observes @Initialized(ApplicationScoped.class) Object event) {
+        loadSampleData();
+    }
+    
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void loadSampleData() {
         logger.info("Loading sample data.");
