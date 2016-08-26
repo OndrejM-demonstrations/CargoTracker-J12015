@@ -11,7 +11,6 @@
                     <div class="ui-grid-col-1" id="leftCol"/>
                     <div class="ui-grid-col-10" id="mainCol">
                         <h:form id="mainDash">
-                            <p:dashboard id="board" model="#{dashboardView.model}">
                                 <p:panel id="Routed" header="Routed" >
                                     <ui:include src="/admin/listRouted.xhtml" class="clearCargoBkg"/>
                                 </p:panel>
@@ -21,7 +20,6 @@
                                 <p:panel id="Claimed" header="Claimed">
                                     <ui:include src="/admin/listClaimed.xhtml"/>
                                 </p:panel>
-                            </p:dashboard>
                         </h:form>
                     </div>
                     <div class="ui-grid-col-1" id="rightCol"/>

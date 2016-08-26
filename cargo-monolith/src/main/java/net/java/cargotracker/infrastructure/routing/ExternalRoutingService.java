@@ -34,7 +34,7 @@ import org.glassfish.jersey.moxy.json.MoxyJsonFeature;
 public class ExternalRoutingService implements RoutingService {
 
     // a URL retrieved from an externally configured JNDI entry
-    @Resource(lookup = "graphTraversalUrlJNDI")
+//    @Resource(lookup = "graphTraversalUrlJNDI")
     private String graphTraversalUrlJNDI;
 
     // the ejb entry URL
