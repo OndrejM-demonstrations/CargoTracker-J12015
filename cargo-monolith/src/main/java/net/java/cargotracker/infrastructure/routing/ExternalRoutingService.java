@@ -3,11 +3,15 @@ package net.java.cargotracker.infrastructure.routing;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.ejb.Stateless;
+import javax.enterprise.concurrent.ContextService;
+import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -54,6 +58,12 @@ public class ExternalRoutingService implements RoutingService {
     private static final Logger log = Logger.getLogger(
             ExternalRoutingService.class.getName());
 
+    @Resource
+    ManagedExecutorService executor;
+
+    @Resource
+    ContextService ctxService;
+
     @PostConstruct
     public void init() {
         // if we have an explictly configured external JNDI entry use that
@@ -73,6 +83,8 @@ public class ExternalRoutingService implements RoutingService {
         String destination = routeSpecification.getDestination().getUnLocode()
                 .getIdString();
 
+        Consumer<Runnable> asyncContext = ThreadAsyncContext.create(ctxService);
+        
         return JaxrsResponseCallback.get(
                 graphTraversalResource
                 .queryParam("origin", origin)
@@ -81,25 +93,40 @@ public class ExternalRoutingService implements RoutingService {
                 .async())
                 .thenApply(r -> {
 
-                    List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
-                    });
-                    
                     // The returned result is then translated back into our domain model.
                     List<Itinerary> itineraries = new ArrayList<>();
 
-                    for (TransitPath transitPath : transitPaths) {
-                        Itinerary itinerary = toItinerary(transitPath);
-                        // Use the specification to safe-guard against invalid itineraries
-                        if (routeSpecification.isSatisfiedBy(itinerary)) {
-                            itineraries.add(itinerary);
-                        } else {
-                            log.log(Level.FINE,
-                                    "Received itinerary that did not satisfy the route specification");
+                    asyncContext.accept( () -> {
+                        List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
+                        });
+
+                        for (TransitPath transitPath : transitPaths) {
+                            Itinerary itinerary = toItinerary(transitPath);
+                            // Use the specification to safe-guard against invalid itineraries
+                            if (routeSpecification.isSatisfiedBy(itinerary)) {
+                                itineraries.add(itinerary);
+                            } else {
+                                log.log(Level.FINE,
+                                        "Received itinerary that did not satisfy the route specification");
+                            }
                         }
-                    }
+                    });
+                    
 
                     return itineraries;
                 });
+
+    }
+    
+    private static class ThreadAsyncContext implements Consumer<Runnable> {
+        public static Consumer<Runnable> create(ContextService ctxService) {
+            return ctxService.createContextualProxy(new ThreadAsyncContext(), Consumer.class);
+        }
+
+        @Override
+        public void accept(Runnable r) {
+            r.run();
+        }
 
     }
 
