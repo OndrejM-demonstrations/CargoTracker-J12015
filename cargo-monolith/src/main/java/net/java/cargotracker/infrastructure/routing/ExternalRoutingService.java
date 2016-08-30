@@ -1,5 +1,6 @@
 package net.java.cargotracker.infrastructure.routing;
 
+import net.java.cargotracker.application.util.reactive.ThreadAsyncContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
@@ -83,7 +84,7 @@ public class ExternalRoutingService implements RoutingService {
         String destination = routeSpecification.getDestination().getUnLocode()
                 .getIdString();
 
-        Consumer<Runnable> asyncContext = ThreadAsyncContext.create(ctxService);
+        ThreadAsyncContext asyncContext = ThreadAsyncContext.create(ctxService);
         
         return JaxrsResponseCallback.get(
                 graphTraversalResource
@@ -96,7 +97,7 @@ public class ExternalRoutingService implements RoutingService {
                     // The returned result is then translated back into our domain model.
                     List<Itinerary> itineraries = new ArrayList<>();
 
-                    asyncContext.accept( () -> {
+                    asyncContext.run( () -> {
                         List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
                         });
 
@@ -118,17 +119,6 @@ public class ExternalRoutingService implements RoutingService {
 
     }
     
-    private static class ThreadAsyncContext implements Consumer<Runnable> {
-        public static Consumer<Runnable> create(ContextService ctxService) {
-            return ctxService.createContextualProxy(new ThreadAsyncContext(), Consumer.class);
-        }
-
-        @Override
-        public void accept(Runnable r) {
-            r.run();
-        }
-
-    }
 
     private Itinerary toItinerary(TransitPath transitPath) {
         List<Leg> legs = new ArrayList<>(transitPath.getTransitEdges().size());
