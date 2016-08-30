@@ -26,10 +26,10 @@ import java.util.concurrent.CompletionStage;
  * 
  * Created by mertcaliskan
  */
-public class JaxrsResponseCallback extends CompletableFuture<Response> implements InvocationCallback<Response> {
+public class JaxrsResponseCallback<T> extends CompletableFuture<T> implements InvocationCallback<T> {
 
     @Override
-    public void completed(Response response) {
+    public void completed(T response) {
         super.complete(response);
     }
 
