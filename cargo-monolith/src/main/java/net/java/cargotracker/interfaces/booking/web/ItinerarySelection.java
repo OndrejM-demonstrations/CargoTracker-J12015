@@ -2,12 +2,12 @@ package net.java.cargotracker.interfaces.booking.web;
 
 import java.io.Serializable;
 import java.util.List;
-import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 import net.java.cargotracker.interfaces.booking.facade.BookingServiceFacade;
 import net.java.cargotracker.interfaces.booking.facade.dto.CargoRoute;
 import net.java.cargotracker.interfaces.booking.facade.dto.RouteCandidate;
+import org.omnifaces.cdi.ViewScoped;
 
 /**
  * Handles itinerary selection. Operates against a dedicated service facade, and
@@ -23,8 +23,7 @@ import net.java.cargotracker.interfaces.booking.facade.dto.RouteCandidate;
  * @see net.java.cargotracker.interfaces.tracking.CargoTrackingController
  */
 @Named
-@SessionScoped
-//@ViewScoped
+@ViewScoped
 public class ItinerarySelection implements Serializable {
 
     private static final long serialVersionUID = 1L;
