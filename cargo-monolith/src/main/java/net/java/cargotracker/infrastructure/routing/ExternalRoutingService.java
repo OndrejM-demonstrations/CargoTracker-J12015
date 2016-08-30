@@ -17,8 +17,7 @@ import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.GenericType;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.*;
 import net.java.cargotracker.application.util.JsonMoxyConfigurationContextResolver;
 import net.java.cargotracker.application.util.reactive.JaxrsResponseCallback;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
@@ -97,7 +96,6 @@ public class ExternalRoutingService implements RoutingService {
                     // The returned result is then translated back into our domain model.
                     List<Itinerary> itineraries = new ArrayList<>();
 
-                    asyncContext.run( () -> {
                         List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
                         });
 
@@ -111,7 +109,6 @@ public class ExternalRoutingService implements RoutingService {
                                         "Received itinerary that did not satisfy the route specification");
                             }
                         }
-                    });
                     
 
                     return itineraries;

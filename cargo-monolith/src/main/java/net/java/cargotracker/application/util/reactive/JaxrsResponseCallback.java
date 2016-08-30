@@ -5,6 +5,11 @@ import javax.ws.rs.client.InvocationCallback;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.enterprise.concurrent.ContextService;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 /**
  * A generic JAR-RS client response callback that is also a CompletableFuture. It is meant to be used in async get method of JAX-RS client.
@@ -14,7 +19,7 @@ import java.util.concurrent.CompletionStage;
  * {@code
     JaxrsResponseCallback.get(ClientBuilder.newClient()
         .request()
-        .async())
+        .async(), Response.class)
         .thenAccept(
             response -> {
                 System.out.println("Response code " + response.getStatus()
@@ -24,23 +29,76 @@ import java.util.concurrent.CompletionStage;
  * }
  * </pre>
  * 
+ * Compared to {@link SimpleJaxrsResponseCallback}, it supports generics for response type. 
+ * It also completes the completionStage in the context of the thread that calls {@code get()} method, thus ensuring that the subsequent callback will also be executed in a managed thread within the same context. 
+ * This is to support runtimes, where JAX-RS runs the completion callback in an unmanaged thread.
+ * 
  * Created by mertcaliskan
  */
 public class JaxrsResponseCallback<T> extends CompletableFuture<T> implements InvocationCallback<T> {
 
+    ThreadAsyncContext asyncContext = null;
+
+    public JaxrsResponseCallback() {
+    }
+
+    public JaxrsResponseCallback(ContextService ctxService) {
+        if (ctxService != null) {
+            asyncContext = ThreadAsyncContext.create(ctxService);
+        }
+    }
+
     @Override
     public void completed(T response) {
-        super.complete(response);
+        if (asyncContext == null) {
+            super.complete(response);
+        } else {
+            asyncContext.run(() -> super.complete(response));
+        }
     }
 
     @Override
     public void failed(Throwable throwable) {
-        super.completeExceptionally(throwable);
+        if (asyncContext == null) {
+            super.completeExceptionally(throwable);
+        } else {
+            asyncContext.run(() -> super.completeExceptionally(throwable));
+        }
     }
 
     public static CompletionStage<Response> get(AsyncInvoker invoker) {
-        final JaxrsResponseCallback completion = new JaxrsResponseCallback();
-        invoker.get(completion);
+        ContextService ctxService = lookupDefaultContextService();
+        return get(invoker, Response.class, ctxService);
+    }
+
+    public static <RESPONSE> CompletionStage<RESPONSE> get(AsyncInvoker invoker, Class<RESPONSE> cls, ContextService ctxService) {
+        final JaxrsResponseCallback<RESPONSE> completion = new JaxrsResponseCallback<>(ctxService);
+        invoker.get(new InvocationCallback<Response>() {
+            @Override
+            public void completed(Response response) {
+                if (Response.class.equals(cls)) {
+                    completion.completed(cls.cast(response));
+                }
+                completion.completed(response.readEntity(cls));
+            }
+
+            @Override
+            public void failed(Throwable throwable) {
+                completion.failed(throwable);
+            }
+            
+        });
         return completion;
     }
+
+    private static ContextService lookupDefaultContextService() {
+        ContextService ctxService = null;
+        try {
+            ctxService = (ContextService)(new InitialContext().lookup("java:comp/DefaultContextService"));
+        } catch (NamingException ex) {
+            Logger.getLogger(JaxrsResponseCallback.class.getName()).log(Level.FINE, null, ex);
+        }
+        return ctxService;
+    }
+
 }
