@@ -5,6 +5,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Alternative;
 import javax.inject.Inject;
 import javax.jms.Destination;
 import javax.jms.JMSContext;
@@ -14,6 +15,7 @@ import net.java.cargotracker.domain.model.handling.HandlingEvent;
 import net.java.cargotracker.interfaces.handling.HandlingEventRegistrationAttempt;
 
 @ApplicationScoped
+@Alternative
 public class JmsApplicationEvents implements ApplicationEvents, Serializable {
 
     private static final int LOW_PRIORITY = 0;
