@@ -152,9 +152,12 @@ public class CargoAdmin {
      * @param finihed Called after last rout candidate to indicate the end of list
      */
     public void getRouteCanditates(Consumer<RouteCandidate> consumer, Runnable finihed) {
-        bookingServiceFacade.requestPossibleRoutesForCargo(trackingId).stream()
-                .forEach(consumer);
-        finihed.run();
+        bookingServiceFacade.requestPossibleRoutesForCargo(trackingId)
+                .thenAccept( candidates ->  {
+                    candidates.stream()
+                        .forEach(consumer);
+                    finihed.run();
+                });
     }
 
     public String assignItinerary() {

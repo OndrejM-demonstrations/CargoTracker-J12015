@@ -32,7 +32,7 @@ public class ItinerarySelection implements Serializable {
     List<RouteCandidate> routeCandidates;
     @Inject
     private BookingServiceFacade bookingServiceFacade;
-
+    
     public List<RouteCandidate> getRouteCandidates() {
         return routeCandidates;
     }
@@ -56,7 +56,11 @@ public class ItinerarySelection implements Serializable {
     public void load() {
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
         routeCandidates = bookingServiceFacade
-                .requestPossibleRoutesForCargo(trackingId);
+            .requestPossibleRoutesForCargo(trackingId)
+            .toCompletableFuture()
+            .join();  
+        /* We still need to block the request thread 
+           before we refactor the page to be asynchronous. */
     }
 
     public String assignItinerary(int routeIndex) {

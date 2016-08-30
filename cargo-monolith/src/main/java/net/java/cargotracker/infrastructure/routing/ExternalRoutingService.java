@@ -2,6 +2,7 @@ package net.java.cargotracker.infrastructure.routing;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
@@ -14,6 +15,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
 import net.java.cargotracker.application.util.JsonMoxyConfigurationContextResolver;
+import net.java.cargotracker.application.util.reactive.JaxrsResponseCallback;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
 import net.java.cargotracker.domain.model.cargo.Leg;
 import net.java.cargotracker.domain.model.cargo.RouteSpecification;
@@ -39,8 +41,8 @@ public class ExternalRoutingService implements RoutingService {
 
     // the ejb entry URL
     @Resource(name = "graphTraversalUrl")
-    private String graphTraversalUrl;    
-    
+    private String graphTraversalUrl;
+
     // TODO Can I use injection?
     private final Client jaxrsClient = ClientBuilder.newClient();
     private WebTarget graphTraversalResource;
@@ -64,35 +66,41 @@ public class ExternalRoutingService implements RoutingService {
     }
 
     @Override
-    public List<Itinerary> fetchRoutesForSpecification(
+    public CompletionStage<List<Itinerary>> fetchRoutesForSpecification(
             RouteSpecification routeSpecification) {
         // The RouteSpecification is picked apart and adapted to the external API.
         String origin = routeSpecification.getOrigin().getUnLocode().getIdString();
         String destination = routeSpecification.getDestination().getUnLocode()
                 .getIdString();
 
-        List<TransitPath> transitPaths = graphTraversalResource
+        return JaxrsResponseCallback.get(
+                graphTraversalResource
                 .queryParam("origin", origin)
                 .queryParam("destination", destination)
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .get(new GenericType<List<TransitPath>>() {
+                .async())
+                .thenApply(r -> {
+
+                    List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
+                    });
+                    
+                    // The returned result is then translated back into our domain model.
+                    List<Itinerary> itineraries = new ArrayList<>();
+
+                    for (TransitPath transitPath : transitPaths) {
+                        Itinerary itinerary = toItinerary(transitPath);
+                        // Use the specification to safe-guard against invalid itineraries
+                        if (routeSpecification.isSatisfiedBy(itinerary)) {
+                            itineraries.add(itinerary);
+                        } else {
+                            log.log(Level.FINE,
+                                    "Received itinerary that did not satisfy the route specification");
+                        }
+                    }
+
+                    return itineraries;
                 });
 
-        // The returned result is then translated back into our domain model.
-        List<Itinerary> itineraries = new ArrayList<>();
-
-        for (TransitPath transitPath : transitPaths) {
-            Itinerary itinerary = toItinerary(transitPath);
-            // Use the specification to safe-guard against invalid itineraries
-            if (routeSpecification.isSatisfiedBy(itinerary)) {
-                itineraries.add(itinerary);
-            } else {
-                log.log(Level.FINE,
-                        "Received itinerary that did not satisfy the route specification");
-            }
-        }
-
-        return itineraries;
     }
 
     private Itinerary toItinerary(TransitPath transitPath) {

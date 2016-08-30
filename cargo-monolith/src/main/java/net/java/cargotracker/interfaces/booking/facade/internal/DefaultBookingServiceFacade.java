@@ -1,16 +1,12 @@
 package net.java.cargotracker.interfaces.booking.facade.internal;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CompletionStage;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
-import net.java.cargotracker.domain.model.cargo.Cargo;
-import net.java.cargotracker.domain.model.cargo.CargoRepository;
-import net.java.cargotracker.domain.model.cargo.Itinerary;
-import net.java.cargotracker.domain.model.cargo.TrackingId;
+import net.java.cargotracker.domain.model.cargo.*;
 import net.java.cargotracker.domain.model.location.Location;
 import net.java.cargotracker.domain.model.location.LocationRepository;
 import net.java.cargotracker.domain.model.location.UnLocode;
@@ -91,18 +87,21 @@ public class DefaultBookingServiceFacade implements BookingServiceFacade,
     }
 
     @Override
-    public List<RouteCandidate> requestPossibleRoutesForCargo(String trackingId) {
-        List<Itinerary> itineraries = bookingService
-                .requestPossibleRoutesForCargo(new TrackingId(trackingId));
+    public CompletionStage<List<RouteCandidate>> requestPossibleRoutesForCargo(String trackingId) {
+        return bookingService
+            .requestPossibleRoutesForCargo(new TrackingId(trackingId))
+            .thenApply( (List<Itinerary> itineraries) -> {
 
-        List<RouteCandidate> routeCandidates = new ArrayList<>(
-                itineraries.size());
-        ItineraryCandidateDtoAssembler dtoAssembler
-                = new ItineraryCandidateDtoAssembler();
-        for (Itinerary itinerary : itineraries) {
-            routeCandidates.add(dtoAssembler.toDTO(itinerary));
-        }
+                List<RouteCandidate> routeCandidates = new ArrayList<>(
+                        itineraries.size());
+                ItineraryCandidateDtoAssembler dtoAssembler
+                        = new ItineraryCandidateDtoAssembler();
+                for (Itinerary itinerary : itineraries) {
+                    routeCandidates.add(dtoAssembler.toDTO(itinerary));
+                }
 
-        return routeCandidates;
+                return routeCandidates;
+
+            });
     }
 }

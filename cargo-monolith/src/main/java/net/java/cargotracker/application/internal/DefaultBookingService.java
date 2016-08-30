@@ -3,6 +3,8 @@ package net.java.cargotracker.application.internal;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
@@ -51,11 +53,11 @@ public class DefaultBookingService implements BookingService {
     }
 
     @Override
-    public List<Itinerary> requestPossibleRoutesForCargo(TrackingId trackingId) {
+    public CompletionStage<List<Itinerary>> requestPossibleRoutesForCargo(TrackingId trackingId) {
         Cargo cargo = cargoRepository.find(trackingId);
 
         if (cargo == null) {
-            return Collections.emptyList();
+            return CompletableFuture.completedFuture(Collections.emptyList());
         }
 
         return routingService.fetchRoutesForSpecification(cargo.getRouteSpecification());
