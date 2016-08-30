@@ -44,7 +44,8 @@ public class ExternalRoutingServiceTest {
 //
 //        replay(voyageRepository);
 
-        List<Itinerary> candidates = externalRoutingService.fetchRoutesForSpecification(routeSpecification);
+        List<Itinerary> candidates = externalRoutingService.fetchRoutesForSpecification(routeSpecification)
+                .toCompletableFuture().join();
         org.junit.Assert.assertNotNull(candidates);
 
         for (Itinerary itinerary : candidates) {

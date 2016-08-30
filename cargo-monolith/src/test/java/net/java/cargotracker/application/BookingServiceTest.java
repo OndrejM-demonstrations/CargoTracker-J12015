@@ -216,7 +216,8 @@ public class BookingServiceTest {
 	@Test
 	@InSequence(2)
 	public void testRouteCandidates() {
-		candidates = bookingService.requestPossibleRoutesForCargo(trackingId);
+		candidates = bookingService.requestPossibleRoutesForCargo(trackingId)
+                        .toCompletableFuture().join();
 
 		assertFalse(candidates.isEmpty());
 	}

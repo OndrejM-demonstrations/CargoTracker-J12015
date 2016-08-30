@@ -3,6 +3,8 @@ package net.java.cargotracker.scenario;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import net.java.cargotracker.application.ApplicationEvents;
 import net.java.cargotracker.application.BookingService;
@@ -112,7 +114,8 @@ public class CargoLifecycleScenarioTest {
 
          The cargo is then assigned to the selected route, described by an itinerary. */
         List<Itinerary> itineraries
-                = bookingService.requestPossibleRoutesForCargo(trackingId);
+                = bookingService.requestPossibleRoutesForCargo(trackingId)
+                .toCompletableFuture().join();
         Itinerary itinerary = selectPreferedItinerary(itineraries);
         cargo.assignToRoute(itinerary);
 
@@ -215,7 +218,8 @@ public class CargoLifecycleScenarioTest {
 
         // Repeat procedure of selecting one out of a number of possible routes satisfying the route spec
         List<Itinerary> newItineraries
-                = bookingService.requestPossibleRoutesForCargo(cargo.getTrackingId());
+                = bookingService.requestPossibleRoutesForCargo(cargo.getTrackingId())
+                .toCompletableFuture().join();
         Itinerary newItinerary = selectPreferedItinerary(newItineraries);
         cargo.assignToRoute(newItinerary);
 
@@ -324,7 +328,13 @@ public class CargoLifecycleScenarioTest {
 
     protected void setUp() throws Exception {
         routingService = new RoutingService() {
-            public List<Itinerary> fetchRoutesForSpecification(
+            
+            @Override
+            public CompletionStage<List<Itinerary>> fetchRoutesForSpecification(RouteSpecification routeSpecification) {
+                return CompletableFuture.completedFuture(fetchRoutesForSpecificationSync(routeSpecification));
+            }
+            
+            private List<Itinerary> fetchRoutesForSpecificationSync(
                     RouteSpecification routeSpecification) {
                 if (routeSpecification.getOrigin().equals(SampleLocations.HONGKONG)) {
                     // Hongkong - NYC - Chicago - SampleLocations.STOCKHOLM, initial routing
@@ -356,6 +366,7 @@ public class CargoLifecycleScenarioTest {
                                     DateUtil.toDate("2009-03-15")))));
                 }
             }
+
         };
 
 //        applicationEvents = new SynchronousApplicationEventsStub();
