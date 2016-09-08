@@ -1,11 +1,8 @@
 package net.java.cargotracker.infrastructure.routing;
 
-import net.java.cargotracker.application.util.reactive.ThreadAsyncContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
@@ -19,7 +16,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.*;
 import net.java.cargotracker.application.util.JsonMoxyConfigurationContextResolver;
-import net.java.cargotracker.application.util.reactive.JaxrsResponseCallback;
+import net.java.cargotracker.application.util.reactive.*;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
 import net.java.cargotracker.domain.model.cargo.Leg;
 import net.java.cargotracker.domain.model.cargo.RouteSpecification;
@@ -57,12 +54,15 @@ public class ExternalRoutingService implements RoutingService {
     // TODO Use injection instead?
     private static final Logger log = Logger.getLogger(
             ExternalRoutingService.class.getName());
-
+    
     @Resource
     ManagedExecutorService executor;
 
     @Resource
     ContextService ctxService;
+    
+    @Inject
+    private TransactionalCaller transactionally;
 
     @PostConstruct
     public void init() {
@@ -83,35 +83,34 @@ public class ExternalRoutingService implements RoutingService {
         String destination = routeSpecification.getDestination().getUnLocode()
                 .getIdString();
 
-        ThreadAsyncContext asyncContext = ThreadAsyncContext.create(ctxService);
-        
         return JaxrsResponseCallback.get(
-                graphTraversalResource
+            graphTraversalResource
                 .queryParam("origin", origin)
                 .queryParam("destination", destination)
                 .request(MediaType.APPLICATION_JSON_TYPE)
                 .async())
                 .thenApply(r -> {
 
-                    // The returned result is then translated back into our domain model.
-                    List<Itinerary> itineraries = new ArrayList<>();
+                    return transactionally.call(() -> {
+                        // The returned result is then translated back into our domain model.
+                        List<Itinerary> itineraries = new ArrayList<>();
 
-                        List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
-                        });
+                            List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
+                            });
 
-                        for (TransitPath transitPath : transitPaths) {
-                            Itinerary itinerary = toItinerary(transitPath);
-                            // Use the specification to safe-guard against invalid itineraries
-                            if (routeSpecification.isSatisfiedBy(itinerary)) {
-                                itineraries.add(itinerary);
-                            } else {
-                                log.log(Level.FINE,
-                                        "Received itinerary that did not satisfy the route specification");
+                            for (TransitPath transitPath : transitPaths) {
+                                Itinerary itinerary = toItinerary(transitPath);
+                                // Use the specification to safe-guard against invalid itineraries
+                                if (routeSpecification.isSatisfiedBy(itinerary)) {
+                                    itineraries.add(itinerary);
+                                } else {
+                                    log.log(Level.FINE,
+                                            "Received itinerary that did not satisfy the route specification");
+                                }
                             }
-                        }
-                    
+                        return itineraries;
+                    });
 
-                    return itineraries;
                 });
 
     }
