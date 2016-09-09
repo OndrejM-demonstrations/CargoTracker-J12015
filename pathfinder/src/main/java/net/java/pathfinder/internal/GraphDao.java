@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import javax.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
@@ -12,10 +14,14 @@ public class GraphDao implements Serializable {
 
     private final Random random = new Random();
 
-    public List<String> listLocations() {
-        return new ArrayList<>(Arrays.asList("CNHKG", "AUMEL", "SESTO",
+    /**
+     * This method simulates an async DB call that completes the CompletinoStage in a new managed thread
+     * @return
+     */
+    public CompletionStage<List<String>> listLocations() {
+        return CompletableFuture.<List<String>>completedFuture(new ArrayList<>(Arrays.asList("CNHKG", "AUMEL", "SESTO",
                 "FIHEL", "USCHI", "JNTKO", "DEHAM", "CNSHA", "NLRTM", "SEGOT",
-                "CNHGH", "USNYC", "USDAL"));
+                "CNHGH", "USNYC", "USDAL")));
     }
 
     public String getVoyageNumber(String from, String to) {
