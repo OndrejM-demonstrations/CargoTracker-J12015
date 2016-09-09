@@ -55,12 +55,6 @@ public class ExternalRoutingService implements RoutingService {
     private static final Logger log = Logger.getLogger(
             ExternalRoutingService.class.getName());
     
-    @Resource
-    ManagedExecutorService executor;
-
-    @Resource
-    ContextService ctxService;
-    
     @Inject
     private TransactionalCaller transactionally;
 
