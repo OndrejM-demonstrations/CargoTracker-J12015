@@ -1,9 +1,8 @@
 package net.java.pathfinder.api;
 
 import java.util.*;
-import java.util.function.Function;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
-import javax.ejb.Asynchronous;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
@@ -34,9 +33,9 @@ public class GraphTraversalService {
     // TODO Add internationalized messages for constraints.
     public void findShortestPath(
             @Suspended AsyncResponse asyncResponse,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("origin") String originUnLocode,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("destination") String destinationUnLocode,
-            @QueryParam("deadline") String deadline) {
+            @NotNull @Size(min = 5, max = 5) @QueryParam("origin") final String originUnLocode,
+            @NotNull @Size(min = 5, max = 5) @QueryParam("destination") final String destinationUnLocode,
+            @QueryParam("deadline") final String deadline) {
 
         dao.listLocations()
                 .thenApply((List<String> allVertices) -> {
@@ -58,9 +57,15 @@ public class GraphTraversalService {
                         Date toDate = nextDate(fromDate);
                         date = nextDate(toDate);
 
-                        transitEdges.add(new TransitEdge(
-                                dao.getVoyageNumber(originUnLocode, firstLegTo),
-                                originUnLocode, firstLegTo, fromDate, toDate));
+                        dao.getVoyageNumber(originUnLocode, firstLegTo)
+                            .thenAcceptBoth(CompletableFuture.completedFuture(
+                                new Dates(fromDate, toDate, date)),  // transfer context instead of making final var for each execution
+                                (voyageNumber, dates) -> {
+                                    transitEdges.add(new TransitEdge(
+                                        voyageNumber, originUnLocode, firstLegTo,
+                                        dates.fromDate, dates.toDate));
+                                })
+                            .toCompletableFuture().join();
 
                         for (int j = 0; j < allVertices.size() - 1; j++) {
                             String current = allVertices.get(j);
@@ -68,16 +73,29 @@ public class GraphTraversalService {
                             fromDate = nextDate(date);
                             toDate = nextDate(fromDate);
                             date = nextDate(toDate);
-                            transitEdges.add(new TransitEdge(dao.getVoyageNumber(current,
-                                    next), current, next, fromDate, toDate));
+                            dao.getVoyageNumber(current, next)
+                                .thenAcceptBoth(CompletableFuture.completedFuture(
+                                    new Dates(fromDate, toDate, date)), 
+                                    (voyageNumber, dates) -> {
+                                        transitEdges.add(new TransitEdge(
+                                            voyageNumber, current, next, 
+                                                dates.fromDate, dates.toDate));
+                                    })
+                                .toCompletableFuture().join();
                         }
 
                         String lastLegFrom = allVertices.get(allVertices.size() - 1);
                         fromDate = nextDate(date);
                         toDate = nextDate(fromDate);
-                        transitEdges.add(new TransitEdge(
-                                dao.getVoyageNumber(lastLegFrom, destinationUnLocode),
-                                lastLegFrom, destinationUnLocode, fromDate, toDate));
+                        dao.getVoyageNumber(lastLegFrom, destinationUnLocode)
+                            .thenAcceptBoth(CompletableFuture.completedFuture(
+                                new Dates(fromDate, toDate, date)), 
+                            (voyageNumber, dates) -> {
+                                transitEdges.add(new TransitEdge(
+                                    voyageNumber, lastLegFrom, destinationUnLocode, 
+                                        dates.fromDate, dates.toDate));
+                            })
+                            .toCompletableFuture().join();
 
                         candidates.add(new TransitPath(transitEdges));
                     }
@@ -86,8 +104,21 @@ public class GraphTraversalService {
 
                     return candidates;
                 })
-                .thenApply( response -> asyncResponse.resume(response))
-                .exceptionally( exception -> asyncResponse.resume(exception));
+                .thenApply(response -> asyncResponse.resume(response))
+                .exceptionally(exception -> asyncResponse.resume(exception));
+    }
+
+    private static class Dates {
+
+        public Date fromDate;
+        public Date toDate;
+        public Date date;
+
+        public Dates(Date fromDate, Date toDate, Date date) {
+            this.fromDate = fromDate;
+            this.toDate = toDate;
+            this.date = date;
+        }
     }
 
     private Date nextDate(Date date) {
