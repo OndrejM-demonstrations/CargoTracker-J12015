@@ -2,6 +2,7 @@ package net.java.cargotracker.application.util.reactive;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public interface CompletionStream<ITEM_TYPE> {
 
@@ -16,6 +17,7 @@ public interface CompletionStream<ITEM_TYPE> {
      */
     public CompletionStream<ITEM_TYPE> acceptEach(Consumer<CompletionStage<ITEM_TYPE>> consumer);
     
+    public <NEW_TYPE> CompletionStream<NEW_TYPE> applyToEach(Function<CompletionStage<ITEM_TYPE>, CompletionStage<NEW_TYPE>> function);
     /**
      * Called when processing is finished and no more items will be received. Returns 
      * CompletionStage to allow chaining further callbacks.

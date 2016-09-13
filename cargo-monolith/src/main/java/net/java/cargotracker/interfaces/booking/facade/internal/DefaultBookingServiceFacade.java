@@ -2,13 +2,11 @@ package net.java.cargotracker.interfaces.booking.facade.internal;
 
 import java.io.Serializable;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
 import net.java.cargotracker.application.util.reactive.CompletionStream;
-import net.java.cargotracker.application.util.reactive.DirectCompletionStream;
 import net.java.cargotracker.domain.model.cargo.*;
 import net.java.cargotracker.domain.model.location.Location;
 import net.java.cargotracker.domain.model.location.LocationRepository;
@@ -91,20 +89,14 @@ public class DefaultBookingServiceFacade implements BookingServiceFacade,
 
     @Override
     public CompletionStream<RouteCandidate> requestPossibleRoutesForCargo(String trackingId) {
-        DirectCompletionStream<RouteCandidate> result = new DirectCompletionStream<>();
-        bookingService
+        return bookingService
             .requestPossibleRoutesForCargo(new TrackingId(trackingId))
-            .acceptEach((CompletionStage<Itinerary> stage) -> {
-                stage.thenAccept(itinerary -> {
+            .applyToEach((CompletionStage<Itinerary> stage) -> {
+                return stage.thenApply(itinerary -> {
                     ItineraryCandidateDtoAssembler dtoAssembler
                             = new ItineraryCandidateDtoAssembler();
-                    result.itemProcessed(dtoAssembler.toDTO(itinerary));
+                    return dtoAssembler.toDTO(itinerary);
                 });
-            })
-            .whenFinished()
-            .thenRun(() -> {
-                result.processingFinished();
             });
-        return result;
     }
 }

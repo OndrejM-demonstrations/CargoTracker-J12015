@@ -59,7 +59,7 @@ public class DefaultBookingService implements BookingService {
         Cargo cargo = cargoRepository.find(trackingId);
 
         if (cargo == null) {
-            return new DirectCompletionStream<>();
+            return DirectCompletionStream.empty();
         }
 
         return routingService.fetchRoutesForSpecification(cargo.getRouteSpecification());
