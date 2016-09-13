@@ -2,13 +2,15 @@ package net.java.cargotracker.interfaces.booking.web;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import javax.faces.context.FacesContext;
 import javax.inject.Inject;
 import javax.inject.Named;
 import net.java.cargotracker.interfaces.booking.facade.BookingServiceFacade;
 import net.java.cargotracker.interfaces.booking.facade.dto.CargoRoute;
 import net.java.cargotracker.interfaces.booking.facade.dto.RouteCandidate;
-import org.omnifaces.cdi.ViewScoped;
+import org.omnifaces.cdi.*;
 
 /**
  * Handles itinerary selection. Operates against a dedicated service facade, and
@@ -34,6 +36,12 @@ public class ItinerarySelection implements Serializable {
     @Inject
     private BookingServiceFacade bookingServiceFacade;
     
+    @Inject
+    @Push(channel="routeCandidates")
+    private PushContext push;
+    
+    private CompletableFuture<Void> websocketTriggered = new CompletableFuture<>();
+    
     public List<RouteCandidate> getRouteCandidates() {
         return routeCandidates;
     }
@@ -53,16 +61,31 @@ public class ItinerarySelection implements Serializable {
     public List<RouteCandidate> getRouteCanditates() {
         return routeCandidates;
     }
+    
+    public void pageLoaded() {
+        websocketTriggered.complete(null);
+    }
 
     public void load() {
+        if (isAjaxRequest()) {
+            return;
+        }
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
         bookingServiceFacade
             .requestPossibleRoutesForCargo(trackingId)
                 .acceptEach(stage -> {
                     stage.thenAccept(routeCandidate -> {
                         Logger.getGlobal().info("Accepted " + routeCandidate);
+                        websocketTriggered.thenRun(() -> {
+                            push.send("OK");
+                        });
                     });
+                      
                 });
+    }
+
+    private static boolean isAjaxRequest() {
+        return FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest();
     }
 
     public String assignItinerary(int routeIndex) {
