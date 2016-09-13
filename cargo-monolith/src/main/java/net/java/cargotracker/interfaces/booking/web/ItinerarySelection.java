@@ -55,12 +55,8 @@ public class ItinerarySelection implements Serializable {
 
     public void load() {
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
-        routeCandidates = bookingServiceFacade
-            .requestPossibleRoutesForCargo(trackingId)
-            .toCompletableFuture()
-            .join();  
-        /* We still need to block the request thread 
-           before we refactor the page to be asynchronous. */
+        bookingServiceFacade
+            .requestPossibleRoutesForCargo(trackingId);
     }
 
     public String assignItinerary(int routeIndex) {
