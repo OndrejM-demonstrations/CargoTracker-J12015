@@ -22,6 +22,7 @@
                 function updateRouteCandidates(data) {
                     //PF('notRouted');
                     console.log(data);
+                    updateNotRouted();
                 }
             </h:outputScript>
             <div class="ui-grid ui-grid-responsive">
@@ -79,11 +80,14 @@
                         </h:panelGroup>
 
                         <h:form>
+                            <p:remoteCommand name="updateNotRouted" update="notRouted"/>
+                        </h:form>
+                        <h:form>
                             <p:remoteCommand action="${itinerarySelection.pageLoaded()}" name="pageLoaded" async="true" />
                         </h:form>
                         <o:socket channel="routeCandidates" onmessage="updateRouteCandidates" connected="true" onopen="pageLoaded"/>
 
-                        <p:panel widgetVar="notRouted">
+                        <p:panel id="notRouted">
                         <h:panelGroup rendered="#{not cargoDetails.cargo.routed}">
 
                             <h:panelGroup rendered="#{empty itinerarySelection.routeCandidates}">

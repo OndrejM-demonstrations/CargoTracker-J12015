@@ -43,6 +43,8 @@ public class CargoDetails {
     }
 
     public void load() {
-        cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
+        if (trackingId != null) {
+            cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
+        }
     }
 }

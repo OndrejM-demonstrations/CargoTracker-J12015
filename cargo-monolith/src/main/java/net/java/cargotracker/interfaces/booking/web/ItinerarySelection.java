@@ -1,9 +1,11 @@
 package net.java.cargotracker.interfaces.booking.web;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import javax.annotation.PostConstruct;
 import javax.faces.context.FacesContext;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -30,6 +32,7 @@ import org.omnifaces.cdi.*;
 public class ItinerarySelection implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private boolean loaded;
     private String trackingId;
     private CargoRoute cargo;
     List<RouteCandidate> routeCandidates;
@@ -40,7 +43,13 @@ public class ItinerarySelection implements Serializable {
     @Push(channel="routeCandidates")
     private PushContext push;
     
-    private CompletableFuture<Void> websocketTriggered = new CompletableFuture<>();
+    private CompletableFuture<Void> websocketTriggered;
+    
+    @PostConstruct
+    public void init() {
+        routeCandidates = new ArrayList<>();
+        websocketTriggered = new CompletableFuture<>();
+    }
     
     public List<RouteCandidate> getRouteCandidates() {
         return routeCandidates;
@@ -67,15 +76,17 @@ public class ItinerarySelection implements Serializable {
     }
 
     public void load() {
-        if (isAjaxRequest()) {
+        if (isLoaded()) {
             return;
         }
+        loaded = true;
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
         bookingServiceFacade
             .requestPossibleRoutesForCargo(trackingId)
                 .acceptEach(stage -> {
                     stage.thenAccept(routeCandidate -> {
                         Logger.getGlobal().info("Accepted " + routeCandidate);
+                        routeCandidates.add(routeCandidate);
                         websocketTriggered.thenRun(() -> {
                             push.send("OK");
                         });
@@ -84,8 +95,8 @@ public class ItinerarySelection implements Serializable {
                 });
     }
 
-    private static boolean isAjaxRequest() {
-        return FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest();
+    private boolean isLoaded() {
+        return loaded;
     }
 
     public String assignItinerary(int routeIndex) {
