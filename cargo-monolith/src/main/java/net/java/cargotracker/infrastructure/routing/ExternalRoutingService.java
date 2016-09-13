@@ -103,6 +103,7 @@ public class ExternalRoutingService implements RoutingService {
                                             "Received itinerary that did not satisfy the route specification");
                                 }
                             }
+                            result.processingFinished();
                         return itineraries;
                     });
 

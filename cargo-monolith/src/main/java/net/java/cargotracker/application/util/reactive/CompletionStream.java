@@ -15,5 +15,13 @@ public interface CompletionStream<ITEM_TYPE> {
      * @return
      */
     public CompletionStream<ITEM_TYPE> acceptEach(Consumer<CompletionStage<ITEM_TYPE>> consumer);
+    
+    /**
+     * Called when processing is finished and no more items will be received. Returns 
+     * CompletionStage to allow chaining further callbacks.
+     * 
+     * @return completionStage completed when processing is finished.
+     */
+    public CompletionStage<Void> whenFinished();
 
 }

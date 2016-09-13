@@ -100,6 +100,10 @@ public class DefaultBookingServiceFacade implements BookingServiceFacade,
                             = new ItineraryCandidateDtoAssembler();
                     result.itemProcessed(dtoAssembler.toDTO(itinerary));
                 });
+            })
+            .whenFinished()
+            .thenRun(() -> {
+                result.processingFinished();
             });
         return result;
     }

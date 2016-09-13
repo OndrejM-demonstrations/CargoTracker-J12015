@@ -18,13 +18,6 @@
                 <f:event type="preRenderView" listener="#{itinerarySelection.load}"/>               
             </f:metadata>
 
-            <h:outputScript target="head">
-                function updateRouteCandidates(data) {
-                    //PF('notRouted');
-                    console.log(data);
-                    updateNotRouted();
-                }
-            </h:outputScript>
             <div class="ui-grid ui-grid-responsive">
                 <div class="ui-grid-row">
                     <div class="ui-grid-col-2" id="leftCol"></div>
@@ -85,13 +78,25 @@
                         <h:form>
                             <p:remoteCommand action="${itinerarySelection.pageLoaded()}" name="pageLoaded" async="true" />
                         </h:form>
-                        <o:socket channel="routeCandidates" onmessage="updateRouteCandidates" connected="true" onopen="pageLoaded"/>
+                        <o:socket channel="routeCandidates" onmessage="updateRouteCandidates" onopen="pageLoaded" />
+                        <h:outputScript target="head">
+                            function updateRouteCandidates(data) {
+                                console.log(data);
+                                updateNotRouted();
+                                if (data == 'finished') {
+                                    OmniFaces.Push.close(routeCandidates);
+                                }
+                            }
+                        </h:outputScript>
 
                         <p:panel id="notRouted">
                         <h:panelGroup rendered="#{not cargoDetails.cargo.routed}">
 
-                            <h:panelGroup rendered="#{empty itinerarySelection.routeCandidates}">
-                                <p><i class="fa fa-exclamation-triangle" style="color: #9b2332"></i> No routes found that satisfy the route specification. Try setting an arrival deadline further into the future.</p>
+                            <h:panelGroup rendered="#{itinerarySelection.loadingFinished and empty itinerarySelection.routeCandidates}">
+                                    <p><i class="fa fa-exclamation-triangle" style="color: #9b2332"></i> No routes found that satisfy the route specification. Try setting an arrival deadline further into the future.</p>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{not itinerarySelection.loadingFinished}">
+                                <p>Searching for routes that satisfy the route specification... <i class="fa fa-spinner fa-pulse" style="color: #9b2332"></i></p>
                             </h:panelGroup>
 
                             <ui:repeat value="#{itinerarySelection.routeCandidates}" var="itinerary" varStatus="itineraryStatus">

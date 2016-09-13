@@ -32,7 +32,8 @@ import org.omnifaces.cdi.*;
 public class ItinerarySelection implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private boolean loaded;
+    private boolean loadingStarted;
+    private boolean loadingFinished;
     private String trackingId;
     private CargoRoute cargo;
     List<RouteCandidate> routeCandidates;
@@ -76,10 +77,10 @@ public class ItinerarySelection implements Serializable {
     }
 
     public void load() {
-        if (isLoaded()) {
+        if (hasLoadingStarted()) {
             return;
         }
-        loaded = true;
+        loadingStarted = true;
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
         bookingServiceFacade
             .requestPossibleRoutesForCargo(trackingId)
@@ -88,17 +89,26 @@ public class ItinerarySelection implements Serializable {
                         Logger.getGlobal().info("Accepted " + routeCandidate);
                         routeCandidates.add(routeCandidate);
                         websocketTriggered.thenRun(() -> {
-                            push.send("OK");
+                            push.send("refresh");
                         });
                     });
                       
+                })
+                .whenFinished()
+                .whenComplete((v, e) -> {
+                    loadingFinished = true;
+                    push.send("finished");
                 });
     }
 
-    private boolean isLoaded() {
-        return loaded;
+    private boolean hasLoadingStarted() {
+        return loadingStarted;
     }
 
+    public boolean isLoadingFinished() {
+        return loadingFinished;
+    }
+    
     public String assignItinerary(int routeIndex) {
         RouteCandidate route = routeCandidates.get(routeIndex);
         bookingServiceFacade.assignCargoToRoute(trackingId, route);
