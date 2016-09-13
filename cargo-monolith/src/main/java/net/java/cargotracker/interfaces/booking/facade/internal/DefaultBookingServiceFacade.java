@@ -2,10 +2,13 @@ package net.java.cargotracker.interfaces.booking.facade.internal;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
+import net.java.cargotracker.application.util.reactive.CompletionStream;
+import net.java.cargotracker.application.util.reactive.DirectCompletionStream;
 import net.java.cargotracker.domain.model.cargo.*;
 import net.java.cargotracker.domain.model.location.Location;
 import net.java.cargotracker.domain.model.location.LocationRepository;
@@ -87,21 +90,17 @@ public class DefaultBookingServiceFacade implements BookingServiceFacade,
     }
 
     @Override
-    public CompletionStage<List<RouteCandidate>> requestPossibleRoutesForCargo(String trackingId) {
-        return bookingService
+    public CompletionStream<RouteCandidate> requestPossibleRoutesForCargo(String trackingId) {
+        DirectCompletionStream<RouteCandidate> result = new DirectCompletionStream<>();
+        bookingService
             .requestPossibleRoutesForCargo(new TrackingId(trackingId))
-            .thenApply( (List<Itinerary> itineraries) -> {
-
-                List<RouteCandidate> routeCandidates = new ArrayList<>(
-                        itineraries.size());
-                ItineraryCandidateDtoAssembler dtoAssembler
-                        = new ItineraryCandidateDtoAssembler();
-                for (Itinerary itinerary : itineraries) {
-                    routeCandidates.add(dtoAssembler.toDTO(itinerary));
-                }
-
-                return routeCandidates;
-
+            .acceptEach((CompletionStage<Itinerary> stage) -> {
+                stage.thenAccept(itinerary -> {
+                    ItineraryCandidateDtoAssembler dtoAssembler
+                            = new ItineraryCandidateDtoAssembler();
+                    result.itemProcessed(dtoAssembler.toDTO(itinerary));
+                });
             });
+        return result;
     }
 }

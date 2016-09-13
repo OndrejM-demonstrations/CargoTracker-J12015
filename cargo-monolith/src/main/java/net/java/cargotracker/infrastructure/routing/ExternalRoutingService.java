@@ -70,14 +70,15 @@ public class ExternalRoutingService implements RoutingService {
     }
 
     @Override
-    public CompletionStage<List<Itinerary>> fetchRoutesForSpecification(
+    public CompletionStream<Itinerary> fetchRoutesForSpecification(
             RouteSpecification routeSpecification) {
         // The RouteSpecification is picked apart and adapted to the external API.
         String origin = routeSpecification.getOrigin().getUnLocode().getIdString();
         String destination = routeSpecification.getDestination().getUnLocode()
                 .getIdString();
 
-        return JaxrsResponseCallback.get(
+        DirectCompletionStream<Itinerary> result = new DirectCompletionStream<>();
+        JaxrsResponseCallback.get(
             graphTraversalResource
                 .queryParam("origin", origin)
                 .queryParam("destination", destination)
@@ -96,7 +97,7 @@ public class ExternalRoutingService implements RoutingService {
                                 Itinerary itinerary = toItinerary(transitPath);
                                 // Use the specification to safe-guard against invalid itineraries
                                 if (routeSpecification.isSatisfiedBy(itinerary)) {
-                                    itineraries.add(itinerary);
+                                    result.itemProcessed(itinerary);
                                 } else {
                                     log.log(Level.FINE,
                                             "Received itinerary that did not satisfy the route specification");
@@ -106,7 +107,7 @@ public class ExternalRoutingService implements RoutingService {
                     });
 
                 });
-
+        return result;
     }
     
 

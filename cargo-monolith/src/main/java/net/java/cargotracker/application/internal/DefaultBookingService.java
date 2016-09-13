@@ -10,6 +10,8 @@ import java.util.logging.Logger;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
+import net.java.cargotracker.application.util.reactive.CompletionStream;
+import net.java.cargotracker.application.util.reactive.DirectCompletionStream;
 import net.java.cargotracker.domain.model.cargo.Cargo;
 import net.java.cargotracker.domain.model.cargo.CargoRepository;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
@@ -53,11 +55,11 @@ public class DefaultBookingService implements BookingService {
     }
 
     @Override
-    public CompletionStage<List<Itinerary>> requestPossibleRoutesForCargo(TrackingId trackingId) {
+    public CompletionStream<Itinerary> requestPossibleRoutesForCargo(TrackingId trackingId) {
         Cargo cargo = cargoRepository.find(trackingId);
 
         if (cargo == null) {
-            return CompletableFuture.completedFuture(Collections.emptyList());
+            return new DirectCompletionStream<>();
         }
 
         return routingService.fetchRoutesForSpecification(cargo.getRouteSpecification());

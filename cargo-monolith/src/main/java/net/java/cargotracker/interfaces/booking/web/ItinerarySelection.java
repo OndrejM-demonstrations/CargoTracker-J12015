@@ -2,6 +2,7 @@ package net.java.cargotracker.interfaces.booking.web;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.logging.Logger;
 import javax.inject.Inject;
 import javax.inject.Named;
 import net.java.cargotracker.interfaces.booking.facade.BookingServiceFacade;
@@ -56,7 +57,12 @@ public class ItinerarySelection implements Serializable {
     public void load() {
         cargo = bookingServiceFacade.loadCargoForRouting(trackingId);
         bookingServiceFacade
-            .requestPossibleRoutesForCargo(trackingId);
+            .requestPossibleRoutesForCargo(trackingId)
+                .acceptEach(stage -> {
+                    stage.thenAccept(routeCandidate -> {
+                        Logger.getGlobal().info("Accepted " + routeCandidate);
+                    });
+                });
     }
 
     public String assignItinerary(int routeIndex) {
