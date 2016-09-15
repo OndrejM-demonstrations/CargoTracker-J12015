@@ -1,15 +1,12 @@
 package net.java.cargotracker.application.internal;
 
-import java.util.Collections;
 import java.util.Date;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
+import net.java.cargotracker.application.util.demo.Slow;
 import net.java.cargotracker.application.util.reactive.CompletionStream;
 import net.java.cargotracker.application.util.reactive.DirectCompletionStream;
 import net.java.cargotracker.domain.model.cargo.Cargo;
@@ -26,6 +23,7 @@ import net.java.cargotracker.domain.service.RoutingService;
 public class DefaultBookingService implements BookingService {
 
     @Inject
+    //@Slow
     private CargoRepository cargoRepository;
     @Inject
     private LocationRepository locationRepository;
