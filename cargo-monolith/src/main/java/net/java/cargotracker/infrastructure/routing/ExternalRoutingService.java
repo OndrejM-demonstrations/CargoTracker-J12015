@@ -1,7 +1,6 @@
 package net.java.cargotracker.infrastructure.routing;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -98,6 +97,7 @@ public class ExternalRoutingService implements RoutingService {
                                 // Use the specification to safe-guard against invalid itineraries
                                 if (routeSpecification.isSatisfiedBy(itinerary)) {
                                     result.itemProcessed(itinerary);
+                                    Thread.sleep(new Random().nextInt(700) + 300);
                                 } else {
                                     log.log(Level.FINE,
                                             "Received itinerary that did not satisfy the route specification");
