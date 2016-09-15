@@ -1,9 +1,12 @@
 package net.java.cargotracker.application.internal;
 
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Resource;
 import javax.ejb.Stateless;
+import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.inject.Inject;
 import net.java.cargotracker.application.BookingService;
 import net.java.cargotracker.application.util.demo.Slow;
@@ -29,6 +32,8 @@ public class DefaultBookingService implements BookingService {
     private LocationRepository locationRepository;
     @Inject
     private RoutingService routingService;
+    @Resource
+    private ManagedExecutorService executor;
     // TODO See if the logger can be injected.
     private static final Logger logger = Logger.getLogger(
             DefaultBookingService.class.getName());
@@ -54,13 +59,24 @@ public class DefaultBookingService implements BookingService {
 
     @Override
     public CompletionStream<Itinerary> requestPossibleRoutesForCargo(TrackingId trackingId) {
-        Cargo cargo = cargoRepository.find(trackingId);
-
-        if (cargo == null) {
-            return DirectCompletionStream.empty();
-        }
-
-        return routingService.fetchRoutesForSpecification(cargo.getRouteSpecification());
+        DirectCompletionStream<Itinerary> completion = new DirectCompletionStream<>();
+        CompletableFuture
+        .supplyAsync(() -> {
+            return cargoRepository.find(trackingId);
+        }, executor)
+        .thenAccept(cargo -> {
+            if (cargo == null) {
+                completion.processingFinished();
+            } else {
+                routingService.fetchRoutesForSpecification(cargo.getRouteSpecification())
+                    .acceptEach(stage -> {
+                        stage.thenAccept(completion::itemProcessed);
+                    })
+                    .whenFinished()
+                        .thenRun(completion::processingFinished);
+            }
+        });
+        return completion;
     }
 
     @Override
