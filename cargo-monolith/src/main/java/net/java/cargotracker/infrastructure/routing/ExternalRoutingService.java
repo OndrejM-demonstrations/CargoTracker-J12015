@@ -2,21 +2,15 @@ package net.java.cargotracker.infrastructure.routing;
 
 import net.java.pathfinder.api.TransitEdge;
 import net.java.pathfinder.api.TransitPath;
-import net.java.pathfinder.api.GraphTraversalRequest;
-import fish.payara.micro.cdi.Outbound;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.ejb.Stateless;
-import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.*;
-import net.java.cargotracker.application.util.JsonMoxyConfigurationContextResolver;
 import net.java.cargotracker.application.util.reactive.*;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
 import net.java.cargotracker.domain.model.cargo.Leg;
@@ -26,7 +20,6 @@ import net.java.cargotracker.domain.model.location.UnLocode;
 import net.java.cargotracker.domain.model.voyage.VoyageNumber;
 import net.java.cargotracker.domain.model.voyage.VoyageRepository;
 import net.java.cargotracker.domain.service.RoutingService;
-import org.glassfish.jersey.moxy.json.MoxyJsonFeature;
 
 /**
  * Our end of the routing service. This is basically a data model translation

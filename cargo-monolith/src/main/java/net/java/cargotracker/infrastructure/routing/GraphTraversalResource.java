@@ -25,8 +25,8 @@ class GraphTraversalResource {
             
     public CompletionStream<TransitPath> get(String origin, String destination) {
         DirectCompletionStream<TransitPath> completion = new DirectCompletionStream<>();
-        final GraphTraversalRequest request = new GraphTraversalRequest();
-        completionMap.put(generateKey(completion), completion);
+        final GraphTraversalRequest request = new GraphTraversalRequest(origin, destination);
+        completionMap.put(request.getId(), completion);
         requestEvent.fire(request);
         return completion;
     }
@@ -46,10 +46,6 @@ class GraphTraversalResource {
                 completion.processingFinished();
             }
         }
-    }
-
-    private Long generateKey(DirectCompletionStream<TransitPath> completion) {
-        return new Random().nextLong();
     }
 
 }

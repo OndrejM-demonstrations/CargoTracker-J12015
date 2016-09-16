@@ -1,10 +1,15 @@
 package net.java.pathfinder.api;
 
+import fish.payara.micro.cdi.Inbound;
+import fish.payara.micro.cdi.Outbound;
 import java.util.*;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Asynchronous;
 import javax.ejb.Stateless;
+import javax.enterprise.event.Event;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -27,19 +32,17 @@ public class GraphTraversalService {
     private static final long ONE_DAY_MS = ONE_MIN_MS * 60 * 24;
 
     Logger logger = Logger.getLogger(GraphTraversalService.class.getCanonicalName());
+    
+    @Inject
+    @Outbound
+    private Event<GraphTraversalResponse> responseEvent;
 
-    @GET
-    @Path("/shortest-path")
-    @Produces({"application/json", "application/xml; qs=.75"})
-    // TODO Add internationalized messages for constraints.
-    public void findShortestPath(
-            @Suspended AsyncResponse asyncResponse,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("origin") String originUnLocode,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("destination") String destinationUnLocode,
-            @QueryParam("deadline") String deadline) {
+    public void findShortestPath(@Observes @Inbound GraphTraversalRequest request) {
+        String originUnLocode = request.getOrigin();
+        String destinationUnLocode = request.getDestination();
 
         dao.listLocations()
-                .thenApply((List<String> allVertices) -> {
+                .thenAccept((List<String> allVertices) -> {
                     Date date = nextDate(new Date());
                     allVertices.remove(originUnLocode);
                     allVertices.remove(destinationUnLocode);
@@ -79,15 +82,18 @@ public class GraphTraversalService {
                                 dao.getVoyageNumber(lastLegFrom, destinationUnLocode),
                                 lastLegFrom, destinationUnLocode, fromDate, toDate));
 
-                        candidates.add(new TransitPath(transitEdges));
+                        responseEvent.fire(GraphTraversalResponse.newWithValue(new TransitPath(transitEdges), request));
                     }
 
+                    responseEvent.fire(GraphTraversalResponse.newCompleted(request));
+                    
                     logger.info("Path Finder Service called for " + originUnLocode + " to " + destinationUnLocode);
-
-                    return candidates;
                 })
-                .thenApply( response -> asyncResponse.resume(response))
-                .exceptionally( exception -> asyncResponse.resume(exception));
+                .exceptionally( e -> {
+                    logger.log(Level.SEVERE, e.getMessage(), e);
+                    responseEvent.fire(GraphTraversalResponse.newCompletedWithException(e, request));
+                    return null;
+                });
     }
 
     private Date nextDate(Date date) {
