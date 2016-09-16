@@ -1,14 +1,14 @@
 package net.java.cargotracker.infrastructure.routing;
 
+import net.java.pathfinder.api.GraphTraversalRequest;
+import fish.payara.micro.cdi.Outbound;
 import java.util.*;
-import java.util.concurrent.CompletionStage;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.ejb.Stateless;
-import javax.enterprise.concurrent.ContextService;
-import javax.enterprise.concurrent.ManagedExecutorService;
+import javax.enterprise.event.Event;
 import javax.inject.Inject;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -45,7 +45,9 @@ public class ExternalRoutingService implements RoutingService {
 
     // TODO Can I use injection?
     private final Client jaxrsClient = ClientBuilder.newClient();
-    private WebTarget graphTraversalResource;
+//    private WebTarget graphTraversalResource;
+    @Inject
+    private GraphTraversalResource graphTraversalResource;
     @Inject
     private LocationRepository locationRepository;
     @Inject
@@ -63,9 +65,6 @@ public class ExternalRoutingService implements RoutingService {
         if (graphTraversalUrlJNDI != null) {
             graphTraversalUrl = graphTraversalUrlJNDI;
         }
-        graphTraversalResource = jaxrsClient.target(graphTraversalUrl);
-        graphTraversalResource.register(new MoxyJsonFeature()).register(
-                new JsonMoxyConfigurationContextResolver());
     }
 
     @Override
@@ -77,37 +76,28 @@ public class ExternalRoutingService implements RoutingService {
                 .getIdString();
 
         DirectCompletionStream<Itinerary> result = new DirectCompletionStream<>();
-        JaxrsResponseCallback.get(
-            graphTraversalResource
-                .queryParam("origin", origin)
-                .queryParam("destination", destination)
-                .request(MediaType.APPLICATION_JSON_TYPE)
-                .async())
-                .thenApply(r -> {
+        
+        graphTraversalResource.get(origin, destination)
+            .acceptEach(stage -> {
 
-                    return transactionally.call(() -> {
-                        // The returned result is then translated back into our domain model.
-                        List<Itinerary> itineraries = new ArrayList<>();
+                stage.thenAccept(transitPath -> {
+                    transactionally.call(() -> {
+                    // The returned result is then translated back into our domain model.
 
-                            List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
-                            });
-
-                            for (TransitPath transitPath : transitPaths) {
-                                Itinerary itinerary = toItinerary(transitPath);
-                                // Use the specification to safe-guard against invalid itineraries
-                                if (routeSpecification.isSatisfiedBy(itinerary)) {
-                                    result.itemProcessed(itinerary);
-                                    Thread.sleep(new Random().nextInt(700) + 300);
-                                } else {
-                                    log.log(Level.FINE,
-                                            "Received itinerary that did not satisfy the route specification");
-                                }
+                            Itinerary itinerary = toItinerary(transitPath);
+                            // Use the specification to safe-guard against invalid itineraries
+                            if (routeSpecification.isSatisfiedBy(itinerary)) {
+                                result.itemProcessed(itinerary);
+                            } else {
+                                log.log(Level.FINE,
+                                        "Received itinerary that did not satisfy the route specification");
                             }
-                            result.processingFinished();
-                        return itineraries;
                     });
-
                 });
+
+            })
+            .whenFinished()
+            .thenRun(result::processingFinished);
         return result;
     }
     

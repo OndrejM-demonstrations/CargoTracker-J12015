@@ -17,6 +17,14 @@ public interface CompletionStream<ITEM_TYPE> {
      */
     public CompletionStream<ITEM_TYPE> acceptEach(Consumer<CompletionStage<ITEM_TYPE>> consumer);
     
+    /**
+     * Applies function to each value and return a new CompletionStream with converted values, 
+     * which is completed when this SompletionStream is completed.
+     * 
+     * @param <NEW_TYPE> Type to which the values will be converted
+     * @param function Converter function from current type to NEW_TYPE
+     * @return new CompletionStream for NEW_TYPE
+     */
     public <NEW_TYPE> CompletionStream<NEW_TYPE> applyToEach(Function<CompletionStage<ITEM_TYPE>, CompletionStage<NEW_TYPE>> function);
     /**
      * Called when processing is finished and no more items will be received. Returns 

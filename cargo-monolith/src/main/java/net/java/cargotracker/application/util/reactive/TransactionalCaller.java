@@ -1,7 +1,6 @@
 package net.java.cargotracker.application.util.reactive;
 
-import java.util.concurrent.Callable;
-import javax.ejb.*;
+import java.util.function.Supplier;
 import javax.enterprise.context.ApplicationScoped;
 import javax.transaction.Transactional;
 
@@ -9,11 +8,11 @@ import javax.transaction.Transactional;
 @Transactional
 public class TransactionalCaller {
 
-    public <V> V call(Callable<V> r) {
-        try {
-            return r.call();
-        } catch (Exception ex) {
-            throw new EJBException(ex);
-        }
+    public <V> V call(Supplier<V> r) {
+        return r.get();
+    }
+
+    public void call(Runnable r) {
+        r.run();
     }
 }
