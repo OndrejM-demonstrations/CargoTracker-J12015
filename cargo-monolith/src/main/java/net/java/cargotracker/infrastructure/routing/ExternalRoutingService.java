@@ -6,11 +6,8 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
 import net.java.cargotracker.application.util.reactive.*;
 import net.java.cargotracker.domain.model.cargo.Itinerary;
 import net.java.cargotracker.domain.model.cargo.Leg;
@@ -30,17 +27,6 @@ import net.java.cargotracker.domain.service.RoutingService;
 @Stateless
 public class ExternalRoutingService implements RoutingService {
 
-    // a URL retrieved from an externally configured JNDI entry
-//    @Resource(lookup = "graphTraversalUrlJNDI")
-    private String graphTraversalUrlJNDI;
-
-    // the ejb entry URL
-    @Resource(name = "graphTraversalUrl")
-    private String graphTraversalUrl;
-
-    // TODO Can I use injection?
-    private final Client jaxrsClient = ClientBuilder.newClient();
-//    private WebTarget graphTraversalResource;
     @Inject
     private GraphTraversalResource graphTraversalResource;
     @Inject
@@ -56,10 +42,6 @@ public class ExternalRoutingService implements RoutingService {
 
     @PostConstruct
     public void init() {
-        // if we have an explictly configured external JNDI entry use that
-        if (graphTraversalUrlJNDI != null) {
-            graphTraversalUrl = graphTraversalUrlJNDI;
-        }
     }
 
     @Override

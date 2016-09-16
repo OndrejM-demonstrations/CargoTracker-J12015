@@ -5,6 +5,7 @@ import fish.payara.micro.cdi.Inbound;
 import fish.payara.micro.cdi.Outbound;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Event;
 import javax.enterprise.event.Observes;
@@ -14,7 +15,7 @@ import net.java.cargotracker.application.util.reactive.DirectCompletionStream;
 import net.java.pathfinder.api.GraphTraversalRequest;
 import net.java.pathfinder.api.GraphTraversalResponse;
 
-@Dependent
+@ApplicationScoped
 class GraphTraversalResource {
 
     @Inject
