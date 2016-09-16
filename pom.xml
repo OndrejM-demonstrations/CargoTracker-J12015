@@ -13,5 +13,6 @@
     <modules>
 	<module>cargo-monolith</module>
     <module>pathfinder</module>
-  </modules>
+        <module>pathfinder-interface</module>
+    </modules>
 </project>

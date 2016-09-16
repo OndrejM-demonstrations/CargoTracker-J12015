@@ -1,5 +1,7 @@
 package net.java.cargotracker.infrastructure.routing;
 
+import net.java.pathfinder.api.TransitEdge;
+import net.java.pathfinder.api.TransitPath;
 import net.java.pathfinder.api.GraphTraversalRequest;
 import fish.payara.micro.cdi.Outbound;
 import java.util.*;

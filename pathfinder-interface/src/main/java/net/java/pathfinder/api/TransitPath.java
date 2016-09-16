@@ -1,4 +1,4 @@
-package net.java.cargotracker.infrastructure.routing;
+package net.java.pathfinder.api;
 
 import java.io.Serializable;
 import java.util.ArrayList;
