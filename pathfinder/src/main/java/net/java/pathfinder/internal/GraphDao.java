@@ -24,15 +24,7 @@ public class GraphDao implements Serializable {
                 "CNHGH", "USNYC", "USDAL")));
     }
 
-    /**
-     * This method simulates an async DB call that completes the CompletinoStage in a new managed thread
-     * @return
-     */
-    public CompletionStage<String> getVoyageNumber(String from, String to) {
-        return CompletableFuture.completedFuture(getVoyageNumberSync(from, to));
-    }
-    
-    private String getVoyageNumberSync(String from, String to) {
+    public String getVoyageNumber(String from, String to) {
         int i = random.nextInt(5);
 
         switch (i) {
