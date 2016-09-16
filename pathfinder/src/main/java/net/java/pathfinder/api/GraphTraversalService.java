@@ -1,8 +1,9 @@
 package net.java.pathfinder.api;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.logging.Logger;
+import javax.ejb.Asynchronous;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
@@ -33,9 +34,9 @@ public class GraphTraversalService {
     // TODO Add internationalized messages for constraints.
     public void findShortestPath(
             @Suspended AsyncResponse asyncResponse,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("origin") final String originUnLocode,
-            @NotNull @Size(min = 5, max = 5) @QueryParam("destination") final String destinationUnLocode,
-            @QueryParam("deadline") final String deadline) {
+            @NotNull @Size(min = 5, max = 5) @QueryParam("origin") String originUnLocode,
+            @NotNull @Size(min = 5, max = 5) @QueryParam("destination") String destinationUnLocode,
+            @QueryParam("deadline") String deadline) {
 
         dao.listLocations()
                 .thenApply((List<String> allVertices) -> {
@@ -47,92 +48,46 @@ public class GraphTraversalService {
                     List<TransitPath> candidates = new ArrayList<>(
                             candidateCount);
 
-                    FindShortestPathVars vars = new FindShortestPathVars();
-                    vars.date = date;
-                    vars.allVertices = allVertices;
-                    CompletableFuture<Void> cf = new CompletableFuture<>();
-                    cf.complete(null);
-                    
-                    for (int counter = 0; counter < candidateCount; counter++) {
-                        cf = cf.thenCombine(CompletableFuture.completedFuture(
-                            counter), 
-                            (v, i) -> {    
-                                vars.allVertices = getRandomChunkOfLocations(vars.allVertices);
-                                List<TransitEdge> transitEdges = new ArrayList<>(
-                                        allVertices.size() - 1);
-                                String firstLegTo = allVertices.get(0);
+                    for (int i = 0; i < candidateCount; i++) {
+                        allVertices = getRandomChunkOfLocations(allVertices);
+                        List<TransitEdge> transitEdges = new ArrayList<>(
+                                allVertices.size() - 1);
+                        String firstLegTo = allVertices.get(0);
 
-                                vars.fromDate = nextDate(vars.date);
-                                vars.toDate = nextDate(vars.fromDate);
-                                vars.date = nextDate(vars.toDate);
+                        Date fromDate = nextDate(date);
+                        Date toDate = nextDate(fromDate);
+                        date = nextDate(toDate);
 
-                                dao.getVoyageNumber(originUnLocode, firstLegTo)
-                                    .thenAccept(
-                                        voyageNumber -> {
-                                            transitEdges.add(new TransitEdge(
-                                                voyageNumber, originUnLocode, firstLegTo,
-                                                vars.fromDate, vars.toDate));
-                                        })
-                                    .toCompletableFuture().join();
+                        transitEdges.add(new TransitEdge(
+                                dao.getVoyageNumber(originUnLocode, firstLegTo),
+                                originUnLocode, firstLegTo, fromDate, toDate));
 
-                                for (int j = 0; j < allVertices.size() - 1; j++) {
-                                    String current = allVertices.get(j);
-                                    String next = allVertices.get(j + 1);
-                                    vars.fromDate = nextDate(vars.date);
-                                    vars.toDate = nextDate(vars.fromDate);
-                                    vars.date = nextDate(vars.toDate);
-                                    dao.getVoyageNumber(current, next)
-                                        .thenAccept(
-                                            voyageNumber -> {
-                                                transitEdges.add(new TransitEdge(
-                                                    voyageNumber, current, next, 
-                                                        vars.fromDate, vars.toDate));
-                                            })
-                                        .toCompletableFuture().join();
-                                }
+                        for (int j = 0; j < allVertices.size() - 1; j++) {
+                            String current = allVertices.get(j);
+                            String next = allVertices.get(j + 1);
+                            fromDate = nextDate(date);
+                            toDate = nextDate(fromDate);
+                            date = nextDate(toDate);
+                            transitEdges.add(new TransitEdge(dao.getVoyageNumber(current,
+                                    next), current, next, fromDate, toDate));
+                        }
 
-                                String lastLegFrom = allVertices.get(allVertices.size() - 1);
-                                vars.fromDate = nextDate(vars.date);
-                                vars.toDate = nextDate(vars.fromDate);
-                                dao.getVoyageNumber(lastLegFrom, destinationUnLocode)
-                                    .thenAcceptBoth(CompletableFuture.completedFuture(vars),
-                                    (voyageNumber, dates) -> {
-                                        transitEdges.add(new TransitEdge(
-                                            voyageNumber, lastLegFrom, destinationUnLocode, 
-                                                dates.fromDate, dates.toDate));
-                                    })
-                                    .toCompletableFuture().join();
+                        String lastLegFrom = allVertices.get(allVertices.size() - 1);
+                        fromDate = nextDate(date);
+                        toDate = nextDate(fromDate);
+                        transitEdges.add(new TransitEdge(
+                                dao.getVoyageNumber(lastLegFrom, destinationUnLocode),
+                                lastLegFrom, destinationUnLocode, fromDate, toDate));
 
-                                candidates.add(new TransitPath(transitEdges));
-                                return null;
-                            });
+                        candidates.add(new TransitPath(transitEdges));
                     }
 
                     logger.info("Path Finder Service called for " + originUnLocode + " to " + destinationUnLocode);
 
                     return candidates;
                 })
-                .thenApply(response -> asyncResponse.resume(response))
-                .exceptionally(exception -> asyncResponse.resume(exception));
-    }
-
-    private static class FindShortestPathVars {
-
-        public Date fromDate;
-        public Date toDate;
-        public Date date;
-        public List<String> allVertices;
-
-        public FindShortestPathVars() {
-        }
-
-        public FindShortestPathVars(Date fromDate, Date toDate, Date date, List<String> allVertices) {
-            this.fromDate = fromDate;
-            this.toDate = toDate;
-            this.date = date;
-            this.allVertices = allVertices;
-        }
-
+                .thenApply( response -> asyncResponse.resume(response))
+                .exceptionally( exception -> asyncResponse.resume(exception));
     }
 
     private Date nextDate(Date date) {
