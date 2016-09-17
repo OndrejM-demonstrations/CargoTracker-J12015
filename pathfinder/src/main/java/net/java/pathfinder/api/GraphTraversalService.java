@@ -3,29 +3,22 @@ package net.java.pathfinder.api;
 import fish.payara.micro.cdi.Inbound;
 import fish.payara.micro.cdi.Outbound;
 import java.util.*;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.ejb.Asynchronous;
 import javax.ejb.Stateless;
 import javax.enterprise.event.Event;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
 import net.java.pathfinder.internal.GraphDao;
+import net.java.pathfinder.internal.Slow;
 
 @Stateless
 @Path("/graph-traversal")
 public class GraphTraversalService {
 
     @Inject
+    //@Slow
     private GraphDao dao;
     private final Random random = new Random();
     private static final long ONE_MIN_MS = 1000 * 60;

@@ -42,7 +42,7 @@ public class ExternalRoutingService implements RoutingService {
 
     @PostConstruct
     public void init() {
-    }
+        }
 
     @Override
     public CompletionStream<Itinerary> fetchRoutesForSpecification(
