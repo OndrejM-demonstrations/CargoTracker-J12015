@@ -1,5 +1,6 @@
 package net.java.pathfinder.internal;
 
+import java.util.Random;
 import javax.annotation.Priority;
 import javax.enterprise.context.Dependent;
 import javax.interceptor.*;
@@ -11,7 +12,7 @@ import javax.interceptor.*;
 public class MakeSlowInterceptor {
     @AroundInvoke
     public Object makeSlow(InvocationContext ctx) throws Exception {
-        Thread.sleep(200);
+        Thread.sleep(new Random().nextInt(400));
         return ctx.proceed();
     }
 }
