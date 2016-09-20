@@ -18,7 +18,7 @@ import net.java.pathfinder.internal.Slow;
 public class GraphTraversalService {
 
     @Inject
-    //@Slow
+    @Slow
     private GraphDao dao;
     private final Random random = new Random();
     private static final long ONE_MIN_MS = 1000 * 60;
