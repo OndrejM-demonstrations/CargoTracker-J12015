@@ -1,9 +1,39 @@
-Cargo Tracker and Micro-services
+Reactive improvements of Cargo Tracker
 ================================
 
-This project takes the original [cargo tracker](https://cargotracker.java.net/) 
-application which is, in the terminology of microservices a ***monolith***, and 
-splits out the pathfinder service as a separate micro service. 
+This project provides an example how to enhance an existing Java EE application 
+written in a traditional approach in a reactive way to improve its responsiveness.
+
+This project is based on the original [cargo tracker](https://cargotracker.java.net/) 
+application which is already modified to separate a pathfinder service into a separate 
+microservice accessible by REST.
+
+Starting with the monolith and one extracted microservice, it takes one particular usecase 
+of searching for routes for delivering cargo and improves its responsiveness using asynchronous approach in multiple steps.
+Later, even the communication between the monolith and microservice is enhanced in asynchrnous way. REST communication is exchanged for a solution based on easy to use message-passing, which is based on distributed CDI event bus provided by Payara Micro runtime. 
+
+Enhancement is demonstrated in several steps, each happens to be in a separate branch:
+
+- `master` - contains the final solution
+- `payara-micro` - changes to the original cargo tracker monolith to make it run on Payara Micro (disable JMS, and minor workarounds)
+- `j1_01_async_rest_client` - enhancement of the REST client accessing the pathfinder microservice - uses async API, but the request still waits for results to update GUI. CompletableFuture is used to chain executions when computation is completed asynchronously
+- `j1_02_async_rest_endpoint` - enhancement of REST endpoint in pathfinder with async API - the computation can be executed in a separate thread or external resource, without blocking the initial request thread, which may be released ASAP. 
+- `j1_04_websocket` - added web sockets to also update the UI asynchronously with blocking the initial thread. Web page is loaded ASAP and data is pushed later -> page is lot more responsive. We reverted CompletableFuture to make it possible to send multiple chunks of data ono-by-one using the same future - future is finished immediately and callbacks are chained asynchronously for each piece of response. For more complex usecases, we recommend using [RxJava](https://github.com/ReactiveX/RxJava) observers or reactive streams. But we still have some blocking calls in the pipeline, therefore page still takes unnecessary time to load initially.
+- `j1_05_async_cargo_repository` - one more blocking call on DB is made asynchronous. No async JPA calls, therefore we retrieve the data in a background thread and finish the request immediately. When background thread retrieves the data, continues with async computation and data is pushed to the browser via web socket.
+- `j1_07_cdi_event_bus` - finally redesigned the communication between monolith and pathfinder microservice to exchange blocking REST call for two-way message passing of CDI events. An event is passed from monolith to pathfinder under a generated id to initiate the computation, it is stored in a map in the monolith. When computation is finished, pathfinder sends another event to monolith, which tries to match it with the initial event and complete the future to continue processing.
+
+To run the demo, execute both monolith and pathfinder using payara-micro runtime, a described below for PathFinder Microservice. For CargoTracker, you may want to use a static port so that you can connect to the web application always with the same URL. So recommended commands to execute:
+
+To run monolith (run before you start pathfinder):
+```shell
+java -jar payara-micro.jar --deploy cargo-tracker.war --port 8080
+```
+
+```shell
+java -jar payara-micro.jar --deploy pathfinder-1.0-SNAPSHOT.war --autoBindHttp
+```
+
+You can even scale up pathfinder microservice by running the 2nd command mutiple times. The page will deliver results more quickly as both will receive the CDI event to tart the computation, with any further configuration. Pathfinder microservice automatically registers itself with the monolith and the rest of the cluster.
 
 PathFinder Microservice
 -----------------------
