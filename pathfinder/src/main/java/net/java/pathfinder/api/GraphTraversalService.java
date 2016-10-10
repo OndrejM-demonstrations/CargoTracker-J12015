@@ -1,6 +1,7 @@
 package net.java.pathfinder.api;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -34,6 +35,12 @@ public class GraphTraversalService {
             @QueryParam("deadline") String deadline) {
         Date date = nextDate(new Date());
 
+        try {
+            // slow down the service for demonstration
+            Thread.sleep(3000);
+        } catch (InterruptedException ex) {
+        }
+        
         List<String> allVertices = dao.listLocations();
         allVertices.remove(originUnLocode);
         allVertices.remove(destinationUnLocode);
