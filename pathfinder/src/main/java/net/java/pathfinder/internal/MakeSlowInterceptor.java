@@ -12,7 +12,7 @@ import javax.interceptor.*;
 public class MakeSlowInterceptor {
     @AroundInvoke
     public Object makeSlow(InvocationContext ctx) throws Exception {
-        Thread.sleep(new Random().nextInt(400));
+        Thread.sleep(new Random().nextInt(400) + 200);
         return ctx.proceed();
     }
 }
