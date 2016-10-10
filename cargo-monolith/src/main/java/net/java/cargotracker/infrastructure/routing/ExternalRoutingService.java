@@ -97,7 +97,7 @@ public class ExternalRoutingService implements RoutingService {
                                 // Use the specification to safe-guard against invalid itineraries
                                 if (routeSpecification.isSatisfiedBy(itinerary)) {
                                     result.itemProcessed(itinerary);
-                                    Thread.sleep(new Random().nextInt(700) + 300);
+//                                    Thread.sleep(new Random().nextInt(700) + 300);
                                 } else {
                                     log.log(Level.FINE,
                                             "Received itinerary that did not satisfy the route specification");
