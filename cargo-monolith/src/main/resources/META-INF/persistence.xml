@@ -9,7 +9,7 @@
             not a good idea for production. -->
       <!-- The default log level of info is best for production, want to
             see verbose output for development. -->
-      <property name="eclipselink.logging.level" value="FINEST"/>
+      <property name="eclipselink.logging.level" value="CONFIG"/>
       <property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
     </properties>
   </persistence-unit>
