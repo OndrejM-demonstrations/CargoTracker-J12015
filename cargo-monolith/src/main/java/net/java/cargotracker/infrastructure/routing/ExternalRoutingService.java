@@ -85,25 +85,23 @@ public class ExternalRoutingService implements RoutingService {
                 .async())
                 .thenApply(r -> {
 
-                    return transactionally.call(() -> {
-                        // The returned result is then translated back into our domain model.
-                        List<Itinerary> itineraries = new ArrayList<>();
+                    // The returned result is then translated back into our domain model.
+                    List<Itinerary> itineraries = new ArrayList<>();
 
-                            List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
-                            });
+                        List<TransitPath> transitPaths = r.readEntity(new GenericType<List<TransitPath>>() {
+                        });
 
-                            for (TransitPath transitPath : transitPaths) {
-                                Itinerary itinerary = toItinerary(transitPath);
-                                // Use the specification to safe-guard against invalid itineraries
-                                if (routeSpecification.isSatisfiedBy(itinerary)) {
-                                    itineraries.add(itinerary);
-                                } else {
-                                    log.log(Level.FINE,
-                                            "Received itinerary that did not satisfy the route specification");
-                                }
+                        for (TransitPath transitPath : transitPaths) {
+                            Itinerary itinerary = toItinerary(transitPath);
+                            // Use the specification to safe-guard against invalid itineraries
+                            if (routeSpecification.isSatisfiedBy(itinerary)) {
+                                itineraries.add(itinerary);
+                            } else {
+                                log.log(Level.FINE,
+                                        "Received itinerary that did not satisfy the route specification");
                             }
-                        return itineraries;
-                    });
+                        }
+                    return itineraries;
 
                 });
 
