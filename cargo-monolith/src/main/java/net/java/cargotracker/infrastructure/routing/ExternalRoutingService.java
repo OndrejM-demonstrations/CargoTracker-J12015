@@ -85,7 +85,6 @@ public class ExternalRoutingService implements RoutingService {
                 .async())
                 .thenApply(r -> {
 
-                    return transactionally.call(() -> {
                         // The returned result is then translated back into our domain model.
                         List<Itinerary> itineraries = new ArrayList<>();
 
@@ -105,7 +104,6 @@ public class ExternalRoutingService implements RoutingService {
                             }
                             result.processingFinished();
                         return itineraries;
-                    });
 
                 });
         return result;
